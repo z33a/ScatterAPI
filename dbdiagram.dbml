@@ -1,0 +1,52 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table users {
+  id integer [pk, increment]
+  username varchar(100) unique
+  email varchar(200) unique
+  password varchar(80)
+  role varchar(100)
+  status varchar(100)
+  joined_at timestamptz
+  deleted_at timestamptz
+}
+
+// File Groups Table
+Table uploads {
+  id              integer [pk, increment]
+  title            text
+  description     text
+  type varchar(100)
+  created_by      integer [ref: > users.id]
+  created_at      timestamptz
+  updated_at      timestamptz
+}
+
+// Files Table
+Table files {
+  id              integer [pk, increment]
+  upload_id   integer [ref: > uploads.id]
+  file_name       text
+  file_path       text
+  file_size       bigint
+  file_type       varchar(50)
+  created_by      integer [ref: > users.id]
+  uploaded_at     timestamptz
+}
+
+// Tags Table
+Table tags {
+  id              integer [pk, increment]
+  tag_name        text
+  created_at      timestamptz
+  created_by      integer [ref: > users.id]
+}
+
+// File Group Tags Table
+Table uploads_tags {
+  upload_id   integer [pk, ref: > uploads.id]
+  tag_id          integer [pk, ref: > tags.id]
+  created_at      timestamptz
+}
+
