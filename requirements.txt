@@ -1,8 +1,15 @@
-fastapi
+# FastAPI
+fastapi[all]
 uvicorn
-psycopg2
-python-dotenv
-bcrypt
 pydantic
+
+# Postgres
+sqlmodel
+
+# Auth and passwords
+bcrypt # Passwords and hashing
+pyjwt # JSON tokens for state-less rest api
+
+# Other
 python-multipart
-pyjwt
+python-dotenv

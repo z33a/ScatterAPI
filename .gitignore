@@ -161,4 +161,4 @@ cython_debug/
 #.idea/
 
 # Misc and test files used in development
-misc/
+dev/

@@ -7,6 +7,7 @@ from auth.routes import auth_router
 from users.routes import users_router
 from uploads.routes import uploads_router
 from files.routes import files_router
+from misc.routes import misc_router
 from database import initalize_database
 
 app = FastAPI(
@@ -20,6 +21,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(uploads_router)
 app.include_router(files_router)
+app.include_router(misc_router)
 
 @app.get("/", tags=["root"])
 async def root():
