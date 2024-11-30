@@ -8,12 +8,13 @@ from users.routes import users_router
 from uploads.routes import uploads_router
 from files.routes import files_router
 from misc.routes import misc_router
-from database import initalize_database
+from database import initialize_database
+from config import PORT
 
 app = FastAPI(
     title="FastAPI",
     description="This is a custom API documentation with various features.",
-    version="0.0.4"
+    version="0.0.5"
 )
 
 # Include routers
@@ -25,12 +26,12 @@ app.include_router(misc_router)
 
 @app.get("/", tags=["root"])
 async def root():
-    return {"message": "Welcome to the API, for documentation open '/docs'"}
+    return {"message": "Welcome to the API, for documentation open '/docs' or '/redoc'"}
 
-@app.get("/initialize", tags=["root"])
-async def initialize():
-    initalize_database()
+@app.on_event("startup")
+def on_startup():
+    initialize_database()
 
 # Add an entry point for running with `python main.py`
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=PORT)

@@ -1,32 +1,38 @@
 # External imports
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session, select
 
 # Internal imports
-from auth.utils import create_access_token, verify_password
-from database import fetch_query
+from users.models import User
+from database import engine
+from auth.utils import verify_password, create_token, TokenType
 from auth.models import Token
-from config import FORBIDDEN_ACCOUNTS_LOGIN
 
 auth_router = APIRouter()
 
 # Login and generate token
 @auth_router.post("/token", tags=["auth"], response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    if form_data.username in FORBIDDEN_ACCOUNTS_LOGIN:
-        raise HTTPException(status.HTTP_423_LOCKED, detail="Login to this account is disabled!")
+async def login_for_access_token(unsave_refresh: bool, form_data: OAuth2PasswordRequestForm = Depends()):
+    with Session(engine) as session:
+        statement = select(User).where(User.username == form_data.username)
+        results = session.exec(statement)
+        user = results.first()
 
-    # Fetch the user from the database
-    user = fetch_query("SELECT * FROM users WHERE username = %s", (form_data.username,))
-    
-    if not user or not verify_password(form_data.password, user[0]["password"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User does not exist!")
+    else:
+        print(user.password + " ---- " + form_data.password)
+        correct_password = verify_password(form_data.password, user.password)
 
-    # Create access token
-    access_token = create_access_token(data={"sub": form_data.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+        if correct_password:
+            access_token = create_token({"sub": form_data.username}, TokenType.ACCESS)
+            refresh_token = create_token({"sub": form_data.username}, TokenType.REFRESH)
 
+            return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "Bearer"}
+        else:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password!")
+
+@auth_router.post("/refresh-token", tags=["auth"])
+async def refresh_access_token(refresh_token: str):
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="This endpoint is still under development!")

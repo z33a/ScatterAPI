@@ -6,8 +6,9 @@ from typing import List, Tuple
 # Internal imports
 from misc.models import Health
 
+# Main code
 misc_router = APIRouter()
 
-@misc_router.get("/health", tags=["miscc"], response_model=Health)
+@misc_router.get("/health", tags=["misc"], response_model=Health)
 async def health_check():
-    return {"status": "healthy"}
+    pass

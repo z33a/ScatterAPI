@@ -1,13 +1,12 @@
 # FastAPI
 fastapi[all]
 uvicorn
-pydantic
 
 # Postgres
 sqlmodel
 
 # Auth and passwords
-bcrypt # Passwords and hashing
+passlib[argon2] # Passwords and hashing
 pyjwt # JSON tokens for state-less rest api
 
 # Other

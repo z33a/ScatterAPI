@@ -4,17 +4,19 @@ import os
 
 load_dotenv()
 
+# FastAPI
+PORT = int(os.getenv("PORT", 8000))
+
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Tokens
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
-
-FORBIDDEN_ACCOUNTS_LOGIN = ["Anonymous"]
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60)) # Access token default is 60 minutes (1 hour)
+REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", 10080)) # Refresh token default is 10080 minutes (7 days)
 
 # Uploads
-UPLOAD_TYPE_FILE_SIZE_TRESHOLD = os.getenv("UPLOAD_TYPE_FILE_SIZE_TRESHOLD", 10 * 1024 * 1024) # Default is 10MB
+UPLOAD_METHOD_FILE_SIZE_TRESHOLD = os.getenv("UPLOAD_METHOD_FILE_SIZE_TRESHOLD", 10 * 1024 * 1024) # Default is 10MB
 MAX_UPLOAD_SIZE = os.getenv("MAX_UPLOAD_SIZE", 50 * 1024 * 1024) # Default is 50MB
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/mnt/storage/Code/Projects/Scatter/ScatterTest/01-python/filesystem")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR")
