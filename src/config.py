@@ -9,6 +9,7 @@ PORT = int(os.getenv("PORT", 8000))
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL")
+ANONYMOUS_USER = os.getenv("ANONYMOUS_USER", "Anonymous")
 
 # Tokens
 SECRET_KEY = os.getenv("SECRET_KEY")

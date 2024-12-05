@@ -13,7 +13,7 @@ auth_router = APIRouter()
 
 # Login and generate token
 @auth_router.post("/token", tags=["auth"], response_model=Token)
-async def login_for_access_token(unsave_refresh: bool, form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     with Session(engine) as session:
         statement = select(User).where(User.username == form_data.username)
         results = session.exec(statement)
@@ -22,14 +22,13 @@ async def login_for_access_token(unsave_refresh: bool, form_data: OAuth2Password
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User does not exist!")
     else:
-        print(user.password + " ---- " + form_data.password)
         correct_password = verify_password(form_data.password, user.password)
 
         if correct_password:
             access_token = create_token({"sub": form_data.username}, TokenType.ACCESS)
             refresh_token = create_token({"sub": form_data.username}, TokenType.REFRESH)
 
-            return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "Bearer"}
+            return {"access_token": access_token, "token_type": "bearer"}
         else:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password!")
 

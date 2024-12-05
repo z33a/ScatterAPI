@@ -1,37 +1,27 @@
 # External imports
 from fastapi import APIRouter, HTTPException, Depends, status
-from sqlmodel import Session, select
-from fastapi.security import OAuth2PasswordBearer
+from sqlmodel import Session, select, or_
 
 # Internal imports
 from users.models import User, UserCreate, UserResponse
 from database import engine
-from auth.utils import hash_password, verify_token
-from users.utils import check_password
+from auth.utils import hash_password
+from users.utils import check_password_structure, verify_authenticated_user
+from config import ANONYMOUS_USER
 
 users_router = APIRouter()
 
-# OAuth2PasswordBearer provides the token from the Authorization header
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-# Sign up and create a new account
+# Sign up and create a new user
 @users_router.post("/users", tags=["users"], response_model=UserResponse)
 async def new_user(new_user: UserCreate):
     with Session(engine) as session:
-        statement = select(User).where(User.username == new_user.username)
+        statement = select(User).where(or_(User.username == new_user.username, User.email == new_user.email))
         results = session.exec(statement)
 
         if results.first() is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User with this username already exists!")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User with this username or email already exists!")
 
-    with Session(engine) as session:
-        statement = select(User).where(User.email == new_user.email)
-        results = session.exec(statement)
-
-        if results.first() is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User with this email already exists!")
-
-    if check_password(new_user.password):
+    if check_password_structure(new_user.password):
         hashed_password = hash_password(new_user.password)
         new_user.password = hashed_password
 
@@ -53,21 +43,33 @@ async def get_all_users():
 
         return results.all()
 
-# Protected route (requires authentication) !!! Must be before '/users/{user_id}' endpoint !!!
+# Get a user logged in by the token !!! Must be before '/users/{user_id}' endpoint !!!
 @users_router.get("/users/me", tags=["users"], response_model=UserResponse)
-async def get_authorized_user(token: str):
-    print(1)
-    token_payload = verify_token(token)
-    print(token_payload)
-    
-    with Session(engine) as session:
-        statement = select(User).where(User.username == token_payload["sub"])
-        results = session.exec(statement)
-        user = results.first()
+async def get_authenticated_user(current_user: UserResponse = Depends(verify_authenticated_user)):
+    if current_user.username == ANONYMOUS_USER:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or no token provided!")
 
-        return user
+    return current_user
+
+# Update a user logged in by the token
+@users_router.put("/users/me", tags=["users"], response_model=UserResponse)
+async def update_authenticated_user(current_user: UserResponse = Depends(verify_authenticated_user)):
+    pass
+
+# Delete a user logged in by the token
+@users_router.delete("/users/me", tags=["users"], response_model=str)
+async def delete_authenticated_user(current_user: UserResponse = Depends(verify_authenticated_user)):
+    return "User 'user' deleted successfully."
 
 # Get a user by ID
 @users_router.get("/users/{user_id}", tags=["users"], response_model=UserResponse)
 async def get_user(user_id: int):
-    pass
+    with Session(engine) as session:
+        statement = select(User).where(User.id == user_id)
+        results = session.exec(statement)
+        user = results.first()
+
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found!")
+                
+        return user
