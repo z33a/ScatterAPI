@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 
 # Internal imports
-from users.models import User
+from users.models import Users
 from database import engine
 from auth.utils import verify_password, create_token, TokenType
 from auth.models import Token
@@ -15,7 +15,7 @@ auth_router = APIRouter()
 @auth_router.post("/token", tags=["auth"], response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     with Session(engine) as session:
-        statement = select(User).where(User.username == form_data.username)
+        statement = select(Users).where(Users.username == form_data.username)
         results = session.exec(statement)
         user = results.first()
 

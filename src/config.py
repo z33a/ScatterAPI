@@ -18,6 +18,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60)) 
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", 10080)) # Refresh token default is 10080 minutes (7 days)
 
 # Uploads
-UPLOAD_METHOD_FILE_SIZE_TRESHOLD = os.getenv("UPLOAD_METHOD_FILE_SIZE_TRESHOLD", 10 * 1024 * 1024) # Default is 10MB
-MAX_UPLOAD_SIZE = os.getenv("MAX_UPLOAD_SIZE", 50 * 1024 * 1024) # Default is 50MB
+MAX_FILE_SIZE = os.getenv("MAX_UPLOAD_SIZE", 2000 * 1024 * 1024) # Default is 50MB
+FILE_READ_CHUNK = os.getenv("FILE_READ_CHUNK", 1024) # Size of a chunk to be read from an uploaded file at time. Default is 1MB
 UPLOAD_DIR = os.getenv("UPLOAD_DIR")

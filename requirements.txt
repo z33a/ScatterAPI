@@ -12,3 +12,4 @@ pyjwt # JSON tokens for state-less rest api
 # Other
 python-multipart
 python-dotenv
+aiofiles

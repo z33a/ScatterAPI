@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 
 # Internal imports
 from auth.utils import verify_token
-from users.models import User, UserResponse
+from users.models import Users, UserResponse
 from database import engine
 from users.types import UserRoles, UserStatuses
 from config import ANONYMOUS_USER
@@ -34,9 +34,9 @@ def check_password_structure(password) -> bool:
 def verify_authenticated_user(token_payload: dict | None = Depends(verify_token)) -> UserResponse:
     with Session(engine) as session:
         if token_payload:
-            statement = select(User).where(User.username == token_payload.get("sub"))
+            statement = select(Users).where(Users.username == token_payload.get("sub"))
         else:
-            statement = select(User).where(User.username == ANONYMOUS_USER, User.role == UserRoles.SYSTEM.value)
+            statement = select(Users).where(Users.username == ANONYMOUS_USER, Users.role == UserRoles.SYSTEM.value)
             
         results = session.exec(statement)
         user = results.first()
@@ -45,7 +45,7 @@ def verify_authenticated_user(token_payload: dict | None = Depends(verify_token)
             if token_payload:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found!")
             else:
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error occured on the side of the server! Please contact the API administrator about this issue. Error-reason: user object returned None")
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error occured on the side of the server! Please contact the API administrator about this issue. Error-reason: user object returned None and Anonymous user not found.")
         
         if user.status is UserStatuses.BANNED:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"User is banned and cannot login! Status detail: {user.status_detail}")

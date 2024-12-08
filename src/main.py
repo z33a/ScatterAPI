@@ -8,13 +8,13 @@ from users.routes import users_router
 from uploads.routes import uploads_router
 from files.routes import files_router
 from misc.routes import misc_router
-from database import initialize_database
+from database import initialize_database, setup_database_defaults
 from config import PORT
 
 app = FastAPI(
     title="FastAPI",
-    description="This is a custom API documentation with various features.",
-    version="0.0.5"
+    description="This is a main API for the Eclipse Archive",
+    version="0.0.6"
 )
 
 # Include routers
@@ -31,7 +31,8 @@ async def root():
 @app.on_event("startup")
 def on_startup():
     initialize_database()
+    setup_database_defaults()
 
-# Add an entry point for running with `python main.py`
+# Entry point for running with `python main.py`
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=PORT)

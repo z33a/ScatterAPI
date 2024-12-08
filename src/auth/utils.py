@@ -46,7 +46,7 @@ def create_token(data: dict, token_type: TokenType) -> str:
 
 def verify_token(token: str | None = Depends(oauth2_scheme)) -> dict | None:
     if token:
-        # Verify refresh token
+        # Decode/extract info from refresh token
         try:
             return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         except jwt.ExpiredSignatureError as e:
