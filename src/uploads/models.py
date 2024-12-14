@@ -11,6 +11,7 @@ class Uploads(UploadBase, table=True): # Id is optional because it is generated 
     id: int | None = Field(default=None, primary_key=True)
     type: str
     thumbnail_location: str | None = Field(default=None)
+    created_by: int = Field(foreign_key="users.id")
     created_at: Decimal = Field(default=datetime.datetime.now(datetime.UTC).timestamp())
     updated_at: Decimal = Field(default=datetime.datetime.now(datetime.UTC).timestamp())
     deleted_at: Decimal | None = Field(default=None)
@@ -22,5 +23,6 @@ class UploadResponse(UploadBase):
     id: int
     type: str
     thumbnail_location: str | None
+    created_by: int
     created_at: Decimal
     updated_at: Decimal

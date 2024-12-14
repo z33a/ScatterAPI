@@ -10,6 +10,6 @@ passlib[argon2] # Passwords and hashing
 pyjwt # JSON tokens for state-less rest api
 
 # Other
-python-multipart
-python-dotenv
-aiofiles
+python-multipart # So FastAPI can receive files
+python-dotenv # For better management of env variables
+aiofiles # For receiving and writing files in chunks

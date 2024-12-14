@@ -15,11 +15,10 @@ from files.models import FileResponseSQL
 from uploads.types import UploadTypes
 from database import engine
 
-# Main code
 uploads_router = APIRouter()
 
 @uploads_router.post("/uploads", tags=["uploads"], response_model=UploadResponse)
-async def new_upload(files: list[UploadFile], thumbnail: UploadFile | None = None, title: str = Form(), description: str = Form(), current_user: UserResponse = Depends(verify_authenticated_user)):
+async def new_upload(files: list[UploadFile], thumbnail: UploadFile | None = None, title: str = Form(), description: str | None = Form(default=None), current_user: UserResponse = Depends(verify_authenticated_user)):
     with Session(engine) as session:
         statement = select(Uploads).where(Uploads.title == title)
         results = session.exec(statement)
@@ -38,7 +37,7 @@ async def new_upload(files: list[UploadFile], thumbnail: UploadFile | None = Non
     most_common_mime = primary_mime_counts.most_common(1)[0][0]
     
     # Create inital upload database entry
-    new_upload = Uploads(title=title, description=description, type=most_common_mime)
+    new_upload = Uploads(title=title, description=description, type=most_common_mime, created_by=current_user.id)
     
     with Session(engine) as session:
         db_upload = Uploads.model_validate(new_upload)
@@ -83,9 +82,28 @@ async def new_upload(files: list[UploadFile], thumbnail: UploadFile | None = Non
     return new_upload    
 
 @uploads_router.get("/uploads", tags=["uploads"], response_model=list[UploadResponse])
-async def get_all_uploads():
+async def get_all_uploads(offset: int = 0, limit: int | None = 100, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None):
     with Session(engine) as session:
         statement = select(Uploads).where(Uploads.deleted_at == None)
+
+        # All optional query params - will combine using AND into one statement        
+        if created_after is not None and created_before is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Query 'created_before' and 'created_after' cannot be declared together!")
+
+        if created_before is not None and created_after is None:
+            statement = statement.where(Uploads.created_at < created_before)
+
+        if created_after is not None and created_before is None:
+            statement = statement.where(Uploads.created_at > created_after)
+
+        if created_by is not None:
+            statement = statement.where(Uploads.created_by == created_by)
+
+        if limit is not None:
+            statement = statement.limit(limit)
+            
+        statement = statement.offset(offset)
+
         results = session.exec(statement)
 
         return results.all()

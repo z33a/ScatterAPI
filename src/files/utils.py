@@ -35,9 +35,11 @@ def create_file(file: UploadFile, upload_id: int, file_location: str, file_size:
 async def stream_save_file(file: UploadFile, target: str, max_size: int | None) -> int:
     total_size = 0  # Initialize size tracker
 
-    os.makedirs(os.path.dirname(target), exist_ok=True)
-
     try:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+
+        file.file.seek(0)  # Rewind to the beginning of the file
+
         async with aiofiles.open(target, "wb") as out_file:
             while content := await file.read(FILE_READ_CHUNK):
                 total_size += len(content)  # Increment total size
