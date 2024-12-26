@@ -5,6 +5,9 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [ ] Change all requests from 'example: str = Form(default=None)' to 'example: Annotated[str, Form()] = None' as recommended by FastAPI guide
 - [ ] Replace all results.first() with results.one() if only one result should exist and add try-except blocks for error resolution
 - [ ] Add metadata/documentation to annotations in methods
+- [ ] Do not return internal file, thumbnail and profile picture paths to users
+- [ ] Make all requests respect 'deleted_at' and not show the item
+- [ ] Create better way to inject current UNIX time into SQL querries that use PyDantic models
 
 ## Database
 - [x] Port database logic to SQLModel for simplicity and security
@@ -20,7 +23,7 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [ ] Delete a file if the upload was incomplete (for example when the file was too big)
 - [ ] Cleanup 'new_upload' endpoint
 - [ ] Add check if collection exists before creating upload
-- [ ] Allow users to upload json object as a metadata to an arcive upload (like scraped from Reddit) and save it in postgres using JSONB (more efficient than JSON)
+- [x] Allow users to upload json object as a metadata to an archive upload (like scraped from Reddit) and save it in postgres using JSONB (more efficient than JSON)
 - [ ] Validate json metadata using 'jsonschema'
 
 ## Users
@@ -29,6 +32,12 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [ ] Figure out how to request form model (pydantic/sqlmodel) and file (UploadFile) while keeping content-type as multipart/form-data in new_user endpoint (If different content-type, form model is used as object (json) or file as string in Swagger (FastAPI docs))
 - [ ] Cleanup 'new_user' endpoint
 - [ ] Only allow username without spaces
+- [ ] Make email optional and do not use it as unique indetificator (because for example bots don't have email)
 
 ## Collections
-- [ ] Change privacy from public (everyone), private (only owner) to private (owner + allowed users)
+- [ ] Change privacy from [public (everyone) or private (only owner)] to [public (everyone) or private (owner + allowed users)]
+- [ ] Allow users to upload thumbnails otherwise generate them from random upload belonging to it (or the latest one, but will need frequent updates and writing to disk)
+- [ ] Change internal naming of 'collections' to something different as it interferes with python's own standard library (temporary name 'scatter_collections' applied)
+
+## Tags
+- [ ] Implement tags for uploads and collections

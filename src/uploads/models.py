@@ -1,7 +1,8 @@
 # External imports
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Field, Session, SQLModel, create_engine, select, Column
 import datetime
 from decimal import Decimal
+from sqlalchemy.dialects.postgresql import JSONB
 
 class UploadBase(SQLModel):
     title: str = Field(index=True, unique=True)
@@ -11,9 +12,11 @@ class Uploads(UploadBase, table=True): # Id is optional because it is generated 
     id: int | None = Field(default=None, primary_key=True)
     type: str
     thumbnail_location: str | None = Field(default=None)
+    metadata_type: str | None = Field(default=None)
+    metadata_json: dict | None = Field(sa_column=Column(JSONB))
     created_by: int = Field(foreign_key="users.id")
-    created_at: Decimal = Field(default=datetime.datetime.now(datetime.UTC).timestamp())
-    updated_at: Decimal = Field(default=datetime.datetime.now(datetime.UTC).timestamp())
+    created_at: Decimal
+    updated_at: Decimal
     deleted_at: Decimal | None = Field(default=None)
 
 class UploadCreate(UploadBase):
@@ -23,6 +26,8 @@ class UploadResponse(UploadBase):
     id: int
     type: str
     thumbnail_location: str | None
+    metadata_type: str | None
+    metadata_json: dict | None
     created_by: int
     created_at: Decimal
     updated_at: Decimal

@@ -19,7 +19,7 @@ users_router = APIRouter()
 # Sign up and create a new user
 @users_router.post("/users", tags=["users"], response_model=UserResponse)
 async def new_user(username: str = Form(), email: str = Form(), password: str = Form(), description: str | None = Form(default=None), profile_picture: UploadFile | None = None):
-    new_user: UserCreate = UserCreate(username=username, email=email, password=password, description=description)
+    new_user = Users(username=username, email=email, password=password, description=description, created_at=datetime.datetime.now(datetime.UTC).timestamp(), updated_at=datetime.datetime.now(datetime.UTC).timestamp())
 
     with Session(engine) as session:
         statement = select(Users).where(or_(Users.username == new_user.username, Users.email == new_user.email))

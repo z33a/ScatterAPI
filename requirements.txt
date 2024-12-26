@@ -4,6 +4,10 @@ uvicorn
 
 # Postgres
 sqlmodel
+psycopg2-binary # For performing the actual connections to database (dependency of sqlmodel)
+
+# Uploads
+jsonschema # For validating structure of json objects
 
 # Auth and passwords
 passlib[argon2] # Passwords and hashing

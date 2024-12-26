@@ -23,7 +23,7 @@ def create_file(file: UploadFile, upload_id: int, file_location: str, file_size:
     # Extract the file extension
     original_filename, file_ext = os.path.splitext(file.filename)
 
-    new_file = FileCreate(upload_id=upload_id, original_filename=original_filename, generated_filename=generated_filename, file_location=file_location, file_size=file_size, file_mime=file_mime, file_ext=file_ext, created_by=created_by)
+    new_file = Files(upload_id=upload_id, original_filename=original_filename, generated_filename=generated_filename, file_location=file_location, file_size=file_size, file_mime=file_mime, file_ext=file_ext, created_by=created_by, created_at=datetime.datetime.now(datetime.UTC).timestamp())
 
     with Session(engine) as session:
         db_file = Files.model_validate(new_file)
