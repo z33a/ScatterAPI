@@ -4,7 +4,7 @@ uvicorn
 
 # Postgres
 sqlmodel
-psycopg2-binary # For performing the actual connections to database (dependency of sqlmodel)
+psycopg2-binary # For performing the actual connections to database (dependency of sqlmodel) - Change if using different database than postgres
 
 # Uploads
 jsonschema # For validating structure of json objects

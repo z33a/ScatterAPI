@@ -8,6 +8,7 @@ from users.routes import users_router
 from uploads.routes import uploads_router
 from files.routes import files_router
 from misc.routes import misc_router
+from scatter_collections.routes import collections_router
 from database import initialize_database, setup_database_defaults
 from config import PORT
 
@@ -22,6 +23,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(uploads_router)
 app.include_router(files_router)
+app.include_router(collections_router)
 app.include_router(misc_router)
 
 @app.get("/", tags=["root"])

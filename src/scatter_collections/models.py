@@ -3,6 +3,9 @@ from sqlmodel import Field, Session, SQLModel, create_engine, select
 import datetime
 from decimal import Decimal
 
+# Internal imports
+from utils import current_timestamp
+
 class CollectionBase(SQLModel):
     title: str = Field(index=True, unique=True)
     description: str | None = Field(default=None)
@@ -12,8 +15,8 @@ class Collections(CollectionBase, table=True): # Id is optional because it is ge
     id: int | None = Field(default=None, primary_key=True)
     thumbnail_location: str | None = Field(default=None)
     created_by: int = Field(foreign_key="users.id")
-    created_at: Decimal = Field(default_factory=lambda: Decimal(datetime.datetime.now(datetime.UTC).timestamp()))
-    updated_at: Decimal = Field(default_factory=lambda: Decimal(datetime.datetime.now(datetime.UTC).timestamp()))
+    created_at: Decimal = Field(default_factory=current_timestamp)
+    updated_at: Decimal = Field(default_factory=current_timestamp)
     deleted_at: Decimal | None = Field(default=None)
 
 class CollectionCreate(CollectionBase):
@@ -25,3 +28,9 @@ class CollectionResponse(CollectionBase):
     created_by: int
     created_at: Decimal
     updated_at: Decimal
+
+class UploadCollectionLink(SQLModel, table=True):
+    upload_id: int | None = Field(default=None, foreign_key="uploads.id", primary_key=True)
+    collection_id: int | None = Field(default=None, foreign_key="collections.id", primary_key=True)
+    created_at: Decimal = Field(default_factory=current_timestamp)
+    created_by: int = Field(foreign_key="users.id")

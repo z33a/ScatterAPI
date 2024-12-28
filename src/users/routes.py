@@ -1,7 +1,6 @@
 # External imports
 from fastapi import APIRouter, HTTPException, Depends, status, Form, UploadFile
 from sqlmodel import Session, select, or_
-import datetime
 from fastapi.responses import FileResponse
 import os
 
@@ -13,13 +12,14 @@ from users.utils import check_password_structure, verify_authenticated_user
 from config import ANONYMOUS_USER, UPLOAD_DIR, MAX_FILE_SIZE
 from users.types import UserStatuses
 from files.utils import stream_save_file
+from utils import current_timestamp
 
 users_router = APIRouter()
 
 # Sign up and create a new user
 @users_router.post("/users", tags=["users"], response_model=UserResponse)
 async def new_user(username: str = Form(), email: str = Form(), password: str = Form(), description: str | None = Form(default=None), profile_picture: UploadFile | None = None):
-    new_user = Users(username=username, email=email, password=password, description=description, created_at=datetime.datetime.now(datetime.UTC).timestamp(), updated_at=datetime.datetime.now(datetime.UTC).timestamp())
+    new_user = Users(username=username, email=email, password=password, description=description)
 
     with Session(engine) as session:
         statement = select(Users).where(or_(Users.username == new_user.username, Users.email == new_user.email))
@@ -98,7 +98,7 @@ async def delete_authenticated_user(user_to_delete: str = Form(...), current_use
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username to delete and logged in user do not match!")
 
         user.status = UserStatuses.DELETED.value
-        user.deleted_at = datetime.datetime.now(datetime.UTC).timestamp()
+        user.deleted_at = current_timestamp()
 
         session.add(user)
         session.commit()

@@ -44,3 +44,11 @@ metadata_schemas = {
     MetadataType.REDDIT: RedditSchema,
     MetadataType.RULE34: Rule34Schema
 }
+
+class OrderByReddit(Enum):
+    CREATED_UTC = "created_utc"
+    TITLE_METADATA = "title_metadata"
+
+order_by_metadata = {
+    MetadataType.REDDIT: OrderByReddit
+}
