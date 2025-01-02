@@ -1,19 +1,19 @@
 # External imports
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse as FileResponseFastAPI
 from sqlmodel import Session, select
 import os
 
 # Internal imports
-from files.models import Files, FileResponseSQL
+from files.models import Files, FileResponse
 from database import engine
-from config import UPLOAD_DIR
+from config import SAVE_DIR
 
 # Main code
 files_router = APIRouter()
 
-@files_router.get("/files", tags=["files"], response_model=list[FileResponseSQL])
+@files_router.get("/files", tags=["files"], response_model=list[FileResponse])
 async def get_all_files(offset: int = 0, limit: int | None = 100, upload_id: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None):
     with Session(engine) as session:
         statement = select(Files).where(Files.deleted_at == None)
@@ -43,29 +43,29 @@ async def get_all_files(offset: int = 0, limit: int | None = 100, upload_id: int
 
         return results.all()
 
-@files_router.get("/files/{file_id}", tags=["files"], response_model=FileResponseSQL)
+@files_router.get("/files/{file_id}", tags=["files"], response_model=FileResponse)
 async def get_file(file_id: int):
     with Session(engine) as session:
         statement = select(Files).where(Files.id == file_id)
         results = session.exec(statement)
-        file = results.first()
+        file = results.one()
 
         if file is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found!")
                 
         return file
 
-@files_router.get("/files/{file_id}/download", tags=["files"], response_class=FileResponse)
+@files_router.get("/files/{file_id}/download", tags=["files"], response_class=FileResponseFastAPI)
 async def download_file(file_id: int):
     with Session(engine) as session:
         statement = select(Files).where(Files.id == file_id)
         results = session.exec(statement)
-        file = results.first()
+        file = results.one()
 
         if file is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found!")
         
-        file_path = os.path.join(UPLOAD_DIR, file.file_location, f"{file.generated_filename}{file.file_ext}")
+        file_path = os.path.join(SAVE_DIR, "uploads", str(file.upload_id), "files", f"{file.generated_filename}.{file.file_ext}")
 
         if os.path.exists(file_path):
             return file_path

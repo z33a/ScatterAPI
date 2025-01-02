@@ -9,7 +9,7 @@ from utils import current_timestamp
 
 class UserBase(SQLModel):
     username: str = Field(index=True, unique=True)
-    email: str = Field(unique=True)
+    email: str | None = Field(default=None, unique=True) # Can be unique even if can be None as None is not considered a value by postgres so can be multiple times
     description: str | None = Field(default=None)
 
 class Users(UserBase, table=True):
@@ -18,7 +18,6 @@ class Users(UserBase, table=True):
     role: str = Field(default=UserRoles.USER.value)
     status: str = Field(default=UserStatuses.NORMAL.value)
     status_detail: str | None = Field(default=None) # For example for setting unban date
-    profile_picture_location: str | None = Field(default=None)
     created_at: Decimal = Field(default_factory=current_timestamp)
     updated_at: Decimal = Field(default_factory=current_timestamp)
     deleted_at: Decimal | None = Field(default=None)
@@ -31,7 +30,6 @@ class UserResponse(UserBase):
     role: str
     status: str
     status_detail: str | None
-    profile_picture_location: str | None
     created_at: Decimal
     updated_at: Decimal
 

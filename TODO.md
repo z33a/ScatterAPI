@@ -5,12 +5,12 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [ ] Change all requests from 'example: str = Form(default=None)' to 'example: Annotated[str, Form()] = None' as recommended by FastAPI guide
 - [ ] Replace all results.first() with results.one() if only one result should exist and add try-except blocks for error resolution
 - [ ] Add metadata/documentation to annotations in methods
-- [ ] Do not return internal file, thumbnail and profile picture paths to users
+- [x] Do not return internal file, thumbnail and profile picture paths to users
 - [ ] Make all requests respect 'deleted_at' and not show the item
 - [x] Create better way to inject current UNIX time into SQL querries that use PyDantic models
-- [ ] (For now do not do, the API design may not be aligned with it) Use relationships when returning models like upload (will also include all files) Example: https://sqlmodel.tiangolo.com/tutorial/fastapi/relationships
+- [ ] Use relationships when returning models like upload (will also include all files) Example: https://sqlmodel.tiangolo.com/tutorial/fastapi/relationships (For now do not do, the API design may not be aligned with it) 
 - [ ] Remove all unneeded imports
-- [ ] Change filesystem structure from "/{user_id}/{upload_id}/{files | thumbnail.ext}/image.ext" to "/uploads/{upload_id}/{files | thubmnail.ext | info.json}/image.ext" and "/collections/{collection_id}/thubmnail.ext" and "/users/{user_id}/profile_picture.ext"
+- [x] Change filesystem structure from "/{user_id}/{upload_id}/{files | thumbnail.ext}/image.ext" to "/uploads/{upload_id}/{files | thubmnail.ext | info.json}/image.ext" and "/collections/{collection_id}/thubmnail.ext" and "/users/{user_id}/profile_picture.ext"
 - [ ] Add basic 'offset, limit and other filtering' to all 'get all ...' endpoints 
 
 ## Database
@@ -21,28 +21,31 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [ ] Implement refresh token logic
 
 ## Uploads
-- [ ] Different upload limits based on primary mime type
-- [ ] Implement scaling down thumbnail images (either user uploaded or generated)
-- [ ] Delete a file if the upload was incomplete (for example when the file was too big)
-- [ ] Cleanup 'new_upload' endpoint
+- [ ] Different upload limits based on primary mime type (For example that image can be max 50 MiB but video up to 5 GiB)
+- [x] Implement scaling down thumbnail images (either user uploaded or generated)
+- [x] Delete a file if the upload was incomplete (for example when the file was too big)
+- [x] Cleanup 'new_upload' endpoint
 - [x] Allow users to upload json object as a metadata to an archive upload (like scraped from Reddit) and save it in postgres using JSONB (more efficient than JSON)
 - [ ] Validate json metadata using 'jsonschema'
-- [ ] Save backup json with database info and metadata alongside the files in a upload's directory
-- [ ] Remove duplicate utils function for generating filename (first check if it is not used, if yes replace with one from files.utils)
+- [ ] Save backup json metadata alongside the files in a upload's directory
+- [x] Remove duplicate utils function for generating filename (first check if it is not used, if yes replace with one from files.utils)
+- [x] Implement creating thumbnail for gif, video etc.
+- [ ] Check all mime types against file extensions before working with them
+- [ ] Delete database entry if file upload failed
 
 ## Users
 - [ ] Ensure that users can do only what they are authorized to do
 - [x] Allow users to upload profile pictures (Just copy thumbnail logic from uploads)
 - [ ] Figure out how to request form model (pydantic/sqlmodel) and file (UploadFile) while keeping content-type as multipart/form-data in new_user endpoint (If different content-type, form model is used as object (json) or file as string in Swagger (FastAPI docs))
-- [ ] Cleanup 'new_user' endpoint
-- [ ] Only allow username without spaces
-- [ ] Make email optional and do not use it as unique indetificator (because for example bots don't have email)
+- [x] Cleanup 'new_user' endpoint
+- [x] Only allow username without spaces
+- [x] Make email optional (because for example bots don't have email)
 
 ## Collections
 - [ ] Change privacy from [public (everyone) or private (only owner)] to [public (everyone) or private (owner + allowed users)]
 - [ ] Allow users to upload thumbnails otherwise generate them from random upload belonging to it (or the latest one, but will need frequent updates and writing to disk)
 - [ ] Change internal naming of 'collections' to something different as it interferes with python's own standard library (temporary name 'scatter_collections' applied)
-- [ ] Allow users to define order of uploads in a collection using a jsonb column and ids of uploads (if id not specified add to the end of the page)
+- [ ] Allow users to define order of uploads in a collection using a jsonb column and ids of uploads (if id not specified add to the end of the page), they will also be able to overwrite it by using different order_by
 
 ## Tags
 - [ ] Implement tags for uploads and collections

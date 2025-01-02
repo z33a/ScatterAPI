@@ -8,6 +8,12 @@ psycopg2-binary # For performing the actual connections to database (dependency 
 
 # Uploads
 jsonschema # For validating structure of json objects
+email-validator
+#python-magic # For checking/generating file mimes
+
+# Thumbnails
+moviepy # For generating thumbnails for videos
+pillow # For .gif thumbnail generation
 
 # Auth and passwords
 passlib[argon2] # Passwords and hashing

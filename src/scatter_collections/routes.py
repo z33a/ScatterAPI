@@ -66,12 +66,12 @@ async def add_upload_to_collection(collection_id: int, upload_id: int = Form(), 
         db_collection = results.first()
 
         if db_collection is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection now found!")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Collection not found!")
         else:
             collection = db_collection
 
-    if current_user.username == ANONYMOUS_USER and collection.privacy == CollectionPrivacy.PRIVATE:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot add upload to private collection as anonymous user!")
+    if current_user.id != collection.created_by and collection.privacy == CollectionPrivacy.PRIVATE:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only owner can add uploads to private collection!")
 
     upload_collection_link = UploadCollectionLink(upload_id=upload_id, collection_id=collection_id, created_by=current_user.id)
 

@@ -6,17 +6,18 @@ from sqlmodel import Session, select, desc, asc, text
 from fastapi.responses import FileResponse
 import json
 from jsonschema import validate, ValidationError
+from io import BytesIO
 
 # Internal imports
 from uploads.models import Uploads, UploadResponse, UploadCreate
 from users.models import UserResponse
 from users.utils import verify_authenticated_user
-from config import MAX_FILE_SIZE, UPLOAD_DIR
-from files.utils import stream_save_file, create_file, generate_filename
-from files.models import FileResponseSQL
+from files.utils import create_file
 from uploads.types import UploadTypes, OrderByTypes, OrderByDirectionTypes
 from database import engine
 from uploads.metadata_models import MetadataType, metadata_schemas, order_by_metadata
+from uploads.utils import create_upload_thumbnail
+from config import SAVE_DIR
 
 uploads_router = APIRouter()
 
@@ -30,7 +31,7 @@ async def new_upload(
     description: str | None = Form(default=None),
     current_user: UserResponse = Depends(verify_authenticated_user)):
 
-    if (metadata_type is None and metadata_json is not None) or (metadata_type is not None and metadata_json is None):
+    if (metadata_type is None) != (metadata_json is None): # Same as (metadata_type is None and metadata_json is not None) or (metadata_type is not None and metadata_json is None)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="When uploading metadata, define both 'metadata_type' and 'metadata_json'! If not uploading metadata do not define either of them!")
 
     with Session(engine) as session:
@@ -44,18 +45,15 @@ async def new_upload(
     # Process metadata
     if metadata_type is not None:
         try:
-            if metadata_json is not None:
-                metadata = json.loads(metadata_json)
+            metadata = json.loads(metadata_json)
 
-                if metadata_type != MetadataType.OTHER.value: # If "other", skip validation and accept any JSON structure
-                    metadata_schema = metadata_schemas.get(metadata_type)
+            if metadata_type != MetadataType.OTHER.value: # If "other", skip validation and accept any JSON structure
+                metadata_schema = metadata_schemas.get(metadata_type)
 
-                    if not metadata_schema:
-                        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid metadata type!")
+                if not metadata_schema:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid metadata type!")
 
-                    metadata_schema.parse_obj(metadata)  # If validation fails, a ValidationError will be raised
-            else:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Metadata json cannot be none!")
+                metadata_schema.parse_obj(metadata)  # If validation fails, a ValidationError will be raised
         except json.JSONDecodeError:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
         except ValidationError as e:
@@ -72,7 +70,7 @@ async def new_upload(
     primary_mime_counts = Counter(primary_mimes)
     most_common_mime = primary_mime_counts.most_common(1)[0][0]
 
-    # Create inital upload database entry
+    # Create upload database entry
     new_upload = Uploads(title=title, description=description, type=most_common_mime, metadata_type=metadata_type, metadata_json=metadata, created_by=current_user.id)
     
     with Session(engine) as session:
@@ -82,43 +80,25 @@ async def new_upload(
         session.refresh(db_upload)
         new_upload = db_upload
 
-    thumbnail_location = None
+    # Save all the files
+    for index, file in enumerate(files):
+        await create_file(file=file, upload_id=new_upload.id, filename=str(index), created_by=current_user.id)
 
-    # Get thumbnail
+    # Generate thumbnail
     if thumbnail is not None:
-        thumbnail_location = os.path.join(str(current_user.id), str(new_upload.id), f"thumbnail{os.path.splitext(thumbnail.filename)[1]}")
-        file_size: int = await stream_save_file(file=thumbnail, target=os.path.join(UPLOAD_DIR, thumbnail_location), max_size=MAX_FILE_SIZE)
+        create_upload_thumbnail(file=thumbnail, upload_id=new_upload.id)
     else:
         for file in files:
-            if file.content_type.split('/')[0] == "image":
-                thumbnail_location = os.path.join(str(current_user.id), str(new_upload.id), f"thumbnail{os.path.splitext(file.filename)[1]}")
-                file_size: int = await stream_save_file(file=file, target=os.path.join(UPLOAD_DIR, thumbnail_location), max_size=MAX_FILE_SIZE)
+            await file.seek(0) # Always seek to 0 before reading a file
+            generation_success = create_upload_thumbnail(file=file, upload_id=new_upload.id)
+
+            if generation_success:
                 break
-        
-    if thumbnail_location is not None:
-        with Session(engine) as session:
-            statement = select(Uploads).where(Uploads.id == new_upload.id)
-            results = session.exec(statement)
-            upload = results.one()
 
-            upload.thumbnail_location = thumbnail_location
-            session.add(upload)
-            session.commit()
-            session.refresh(upload)
-            new_upload = upload
-
-    # Save all the files
-    for file in files:
-        generated_filename = generate_filename()
-        _, file_ext = os.path.splitext(file.filename)
-        file_location = os.path.join(str(current_user.id), str(new_upload.id), "files")
-        file_size: int = await stream_save_file(file=file, target=os.path.join(UPLOAD_DIR, file_location, f"{generated_filename}{file_ext}"), max_size=MAX_FILE_SIZE)
-        saved_file: FileResponseSQL = create_file(file=file, upload_id=new_upload.id, file_location=file_location, file_size=file_size, created_by=current_user.id, generated_filename=generated_filename)
-
-    return new_upload    
+    return new_upload
 
 @uploads_router.get("/uploads", tags=["uploads"], response_model=list[UploadResponse])
-async def get_all_uploads(offset: int | None = 0, limit: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None, filter_by_metadata_type: MetadataType | None = None, order_by: str | None = None, order_by_direction: OrderByDirectionTypes | None = OrderByDirectionTypes.DESC):
+async def get_all_uploads(offset: int = 0, limit: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None, filter_by_metadata_type: MetadataType | None = None, order_by: str | None = None, order_by_direction: OrderByDirectionTypes = OrderByDirectionTypes.DESC):
     with Session(engine) as session:
         statement = select(Uploads).where(Uploads.deleted_at == None)#.order_by(text("metadata_json->>'created_utc'")) # Order by just a test
 
@@ -172,7 +152,7 @@ async def get_upload(upload_id: int):
     with Session(engine) as session:
         statement = select(Uploads).where(Uploads.id == upload_id)
         results = session.exec(statement)
-        upload = results.first()
+        upload = results.one()
 
         if upload is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found!")
@@ -188,12 +168,12 @@ async def get_upload_thumbnail(upload_id: int):
     with Session(engine) as session:
         statement = select(Uploads).where(Uploads.id == upload_id)
         results = session.exec(statement)
-        upload = results.first()
+        upload = results.one()
 
         if upload is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found!")
         
-        file_path = os.path.join(UPLOAD_DIR, upload.thumbnail_location)
+        file_path = os.path.join(SAVE_DIR, "uploads", str(upload.id), "thumbnail.jpg")
 
         if os.path.exists(file_path):
             return file_path

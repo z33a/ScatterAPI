@@ -9,11 +9,10 @@ from utils import current_timestamp
 class FileBase(SQLModel):
     upload_id: int = Field(foreign_key="uploads.id")
     original_filename: str
-    generated_filename: str # Example: '1733620946_c1da59f9-8465-4e8d-9b93-06dee6b0ee04'
-    file_location: str # Example: '/{user_id}/{post_id}/files'
+    generated_filename: str
     file_size: int
     file_mime: str
-    file_ext: str # Example: '.png'
+    file_ext: str # Example: 'png'
     created_by: int = Field(foreign_key="users.id")
     
 class Files(FileBase, table=True):
@@ -24,6 +23,6 @@ class Files(FileBase, table=True):
 class FileCreate(FileBase):
     pass
 
-class FileResponseSQL(FileBase):
+class FileResponse(FileBase):
     id: int
     created_at: Decimal
