@@ -9,13 +9,15 @@ from uploads.routes import uploads_router
 from files.routes import files_router
 from misc.routes import misc_router
 from scatter_collections.routes import collections_router
+from tags.routes import tags_router
+
 from database import initialize_database, setup_database_defaults
 from config import PORT
 
 app = FastAPI(
     title="FastAPI",
     description="This is a main API for the Eclipse Archive",
-    version="0.0.6"
+    version="0.0.7"
 )
 
 # Include routers
@@ -24,6 +26,7 @@ app.include_router(users_router)
 app.include_router(uploads_router)
 app.include_router(files_router)
 app.include_router(collections_router)
+app.include_router(tags_router)
 app.include_router(misc_router)
 
 @app.get("/", tags=["root"])

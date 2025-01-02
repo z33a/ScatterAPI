@@ -22,11 +22,9 @@ async def create_file(file: UploadFile, upload_id: int, filename: str, created_b
 
     generated_filename = filename
 
-    file_location = os.path.join("uploads", str(upload_id), "files")
+    file_size = await stream_save_file(file=file, target=os.path.join(SAVE_DIR, "uploads", str(upload_id), "files", f"{generated_filename}.{file_ext}"))
 
-    file_size = await stream_save_file(file=file, target=os.path.join(SAVE_DIR, file_location, f"{generated_filename}.{file_ext}"))
-
-    new_file = Files(upload_id=upload_id, original_filename=original_filename, generated_filename=generated_filename, file_location=file_location, file_size=file_size, file_mime=file_mime, file_ext=file_ext, created_by=created_by)
+    new_file = Files(upload_id=upload_id, original_filename=original_filename, generated_filename=generated_filename, file_size=file_size, file_mime=file_mime, file_ext=file_ext, created_by=created_by)
 
     with Session(engine) as session:
         db_file = Files.model_validate(new_file)

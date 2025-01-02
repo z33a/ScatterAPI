@@ -13,7 +13,7 @@ def initialize_database():
     SQLModel.metadata.create_all(engine)
 
 def setup_database_defaults():
-    anonymous = Users(username=ANONYMOUS_USER, email="anonymous@example.com", password=None, role=UserRoles.SYSTEM.value, status=UserStatuses.NORMAL.value, created_at=datetime.datetime.now(datetime.UTC).timestamp(), updated_at=datetime.datetime.now(datetime.UTC).timestamp())
+    anonymous = Users(username=ANONYMOUS_USER, password=None, role=UserRoles.SYSTEM.value, status=UserStatuses.NORMAL.value, created_at=datetime.datetime.now(datetime.UTC).timestamp(), updated_at=datetime.datetime.now(datetime.UTC).timestamp())
 
     with Session(engine) as session:
         statement = select(Users).where(Users.username == ANONYMOUS_USER, Users.role == UserRoles.SYSTEM.value)

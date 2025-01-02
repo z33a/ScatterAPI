@@ -1,5 +1,5 @@
 # External imports
-from fastapi import APIRouter, HTTPException, Depends, status, Form, UploadFile
+from fastapi import APIRouter, HTTPException, Depends, status, Form, UploadFile, Body
 from sqlmodel import Session, select, or_
 from fastapi.responses import FileResponse
 import os
@@ -20,11 +20,11 @@ users_router = APIRouter()
 
 # Sign up and create a new user
 @users_router.post("/users", tags=["users"], response_model=UserResponse)
-async def new_user(username: str = Form(), email: str | None = Form(default=None), password: str = Form(), description: str | None = Form(default=None), profile_picture: UploadFile | None = None):
-    if " " in username:
+async def new_user(new_user: UserCreate):
+    if " " in new_user.username:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username cannot contain spaces!")
 
-    if email is not None:
+    if new_user.email is not None:
         try:
             emailinfo = validate_email(email, check_deliverability=True)
             email = emailinfo.normalized
@@ -32,13 +32,11 @@ async def new_user(username: str = Form(), email: str | None = Form(default=None
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Email does not have valid format! Exception: {str(e)}")
 
     with Session(engine) as session:
-        statement = select(Users).where(Users.username == username)
+        statement = select(Users).where(Users.username == new_user.username)
         results = session.exec(statement)
 
         if results.first() is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User with this username or email already exists!")
-
-    new_user = Users(username=username, email=email, password=password, description=description)
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User with this username already exists!")
 
     if check_password_structure(new_user.password):
         hashed_password = hash_password(new_user.password)
@@ -50,10 +48,6 @@ async def new_user(username: str = Form(), email: str | None = Form(default=None
             session.commit()
             session.refresh(db_user)
             new_user = db_user
-
-        # Create profile picture
-        if profile_picture is not None:
-            create_profile_picture(file=profile_picture, user_id=new_user.id)
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password! Must contain at least one uppercase letter, one lowercase letter, one digit, and one special symbol.")
 
@@ -83,7 +77,7 @@ async def update_authenticated_user(current_user: UserResponse = Depends(verify_
 
 # Delete a user logged in by the token
 @users_router.delete("/users/me", tags=["users"], response_model=UserDeletionResponse)
-async def delete_authenticated_user(user_to_delete: str = Form(...), current_user: UserResponse = Depends(verify_authenticated_user)):
+async def delete_authenticated_user(user_to_delete: str = Body(embed=True), current_user: UserResponse = Depends(verify_authenticated_user)):
     if current_user.username == ANONYMOUS_USER: # Login of anonymous user is not allowed in this endpoint
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No authentication token provided!")
 
@@ -121,6 +115,20 @@ async def get_authenticated_user_profile_picture(current_user: UserResponse = De
         return file_path
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile picture not found!")
+
+# Set a profile picture of user logged in by the token
+@users_router.post("/users/me/profile_picture", tags=["users"], response_model=bool)
+async def set_authenticated_user_profile_picture(profile_picture: UploadFile | None = None, current_user: UserResponse = Depends(verify_authenticated_user)):
+    if current_user.username == ANONYMOUS_USER: # Login of anonymous user is not allowed in this endpoint
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No authentication token provided!")
+
+    # Create profile picture
+    if profile_picture is not None:
+        create_profile_picture(file=profile_picture, user_id=current_user.id)
+
+        return True
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Profile picture cannot be empty!")
         
 # Get a user by ID
 @users_router.get("/users/{user_id}", tags=["users"], response_model=UserResponse)

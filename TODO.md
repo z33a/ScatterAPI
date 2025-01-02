@@ -11,7 +11,9 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [ ] Use relationships when returning models like upload (will also include all files) Example: https://sqlmodel.tiangolo.com/tutorial/fastapi/relationships (For now do not do, the API design may not be aligned with it) 
 - [ ] Remove all unneeded imports
 - [x] Change filesystem structure from "/{user_id}/{upload_id}/{files | thumbnail.ext}/image.ext" to "/uploads/{upload_id}/{files | thubmnail.ext | info.json}/image.ext" and "/collections/{collection_id}/thubmnail.ext" and "/users/{user_id}/profile_picture.ext"
-- [ ] Add basic 'offset, limit and other filtering' to all 'get all ...' endpoints 
+- [ ] Add basic 'offset, limit and other filtering' to all 'get all ...' endpoints
+- [x] Rewrite all endpoints to use Body (JSON) for requests instead of Form()
+- [ ] Simlify endpoints by moving the base path to APIRouter: https://fastapi.tiangolo.com/tutorial/bigger-applications/#another-module-with-apirouter
 
 ## Database
 - [x] Port database logic to SQLModel for simplicity and security
@@ -31,21 +33,22 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [x] Remove duplicate utils function for generating filename (first check if it is not used, if yes replace with one from files.utils)
 - [x] Implement creating thumbnail for gif, video etc.
 - [ ] Check all mime types against file extensions before working with them
-- [ ] Delete database entry if file upload failed
+- [ ] Delete database entry if file upload failed (also applies to users, files etc.)
+- [ ] Create background job that would run once a day and downscale all uploaded files and save them alongside original ones (have option in endpoint to choose which version)
 
 ## Users
 - [ ] Ensure that users can do only what they are authorized to do
 - [x] Allow users to upload profile pictures (Just copy thumbnail logic from uploads)
-- [ ] Figure out how to request form model (pydantic/sqlmodel) and file (UploadFile) while keeping content-type as multipart/form-data in new_user endpoint (If different content-type, form model is used as object (json) or file as string in Swagger (FastAPI docs))
+- [x] Figure out how to request form model (pydantic/sqlmodel) and file (UploadFile) while keeping content-type as multipart/form-data in new_user endpoint - Can't be done as said in FastAPI docs: https://fastapi.tiangolo.com/tutorial/request-files/#what-is-form-data
 - [x] Cleanup 'new_user' endpoint
 - [x] Only allow username without spaces
 - [x] Make email optional (because for example bots don't have email)
 
 ## Collections
 - [ ] Change privacy from [public (everyone) or private (only owner)] to [public (everyone) or private (owner + allowed users)]
-- [ ] Allow users to upload thumbnails otherwise generate them from random upload belonging to it (or the latest one, but will need frequent updates and writing to disk)
+- [ ] Allow users to upload thumbnails otherwise generate them from random upload belonging to it (or the latest one, but will need frequent updates)
 - [ ] Change internal naming of 'collections' to something different as it interferes with python's own standard library (temporary name 'scatter_collections' applied)
-- [ ] Allow users to define order of uploads in a collection using a jsonb column and ids of uploads (if id not specified add to the end of the page), they will also be able to overwrite it by using different order_by
+- [ ] Allow users to define order of uploads in a collection using a jsonb column and ids of uploads (if id not specified add to the end of the page), they will also be able to overwrite it by using different order_by on 'get all ...' endpoint
 
 ## Tags
-- [ ] Implement tags for uploads and collections
+- [x] Implement tags for uploads and collections

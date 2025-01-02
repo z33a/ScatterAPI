@@ -1,5 +1,5 @@
 # External imports
-from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form, status
+from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form, status, Body
 import os
 from collections import Counter
 from sqlmodel import Session, select, desc, asc, text
@@ -18,6 +18,7 @@ from database import engine
 from uploads.metadata_models import MetadataType, metadata_schemas, order_by_metadata
 from uploads.utils import create_upload_thumbnail
 from config import SAVE_DIR
+from tags.models import Tags, TagUploadLinks
 
 uploads_router = APIRouter()
 
@@ -86,7 +87,7 @@ async def new_upload(
 
     # Generate thumbnail
     if thumbnail is not None:
-        create_upload_thumbnail(file=thumbnail, upload_id=new_upload.id)
+        create_upload_thumbnail(file=thumbnail, upload_id=new_upload.id, is_user_uploaded=True)
     else:
         for file in files:
             await file.seek(0) # Always seek to 0 before reading a file
@@ -179,3 +180,89 @@ async def get_upload_thumbnail(upload_id: int):
             return file_path
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thumbnail not found!")
+
+@uploads_router.post("/uploads/{upload_id}/tags", tags=["uploads"], response_model=list[TagUploadLinks])
+async def add_tags_to_upload(upload_id: int, tag_ids: list[int] = Body(embed=True), current_user: UserResponse = Depends(verify_authenticated_user)):
+    current_upload = None
+
+    with Session(engine) as session:
+        statement = select(Uploads).where(Uploads.id == upload_id)
+        results = session.exec(statement)
+        upload = results.first()
+
+        if upload is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found!")
+        else:
+            current_upload = upload
+
+    if current_user.id != current_upload.created_by:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only owner can add tags to upload!")
+
+    links = []
+
+    for tag_id in tag_ids:
+        with Session(engine) as session:
+            statement = select(Tags).where(Tags.id == tag_id)
+            results = session.exec(statement)
+            tag = results.first()
+
+            if tag is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Tag {tag_id} not found!")
+
+        with Session(engine) as session:
+            statement = select(TagUploadLinks).where(TagUploadLinks.tag_id == tag_id, TagUploadLinks.upload_id == current_upload.id)
+            results = session.exec(statement)
+            tag_upload_link = results.first()
+
+            if tag_upload_link is not None:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Tag {tag_id} already added to upload {current_upload.id}!")
+
+    for tag_id in tag_ids:
+        tag_upload_link = TagUploadLinks(tag_id=tag_id, upload_id=current_upload.id, created_by=current_user.id)
+
+        with Session(engine) as session:
+            db_tag_upload_link = TagUploadLinks.model_validate(tag_upload_link)
+            session.add(db_tag_upload_link)
+            session.commit()
+            session.refresh(db_tag_upload_link)
+            tag_upload_link = db_tag_upload_link
+
+        links.append(tag_upload_link)
+
+    return links
+
+@uploads_router.delete("/uploads/{upload_id}/tags", tags=["uploads"], response_model=bool)
+async def remove_tags_from_upload(upload_id: int, tag_ids: list[int] = Body(embed=True), current_user: UserResponse = Depends(verify_authenticated_user)):
+    current_upload = None
+
+    with Session(engine) as session:
+        statement = select(Uploads).where(Uploads.id == upload_id)
+        results = session.exec(statement)
+        upload = results.first()
+
+        if upload is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found!")
+        else:
+            current_upload = upload
+
+    if current_user.id != current_upload.created_by:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only owner can remove tags from upload!")
+
+    for tag_id in tag_ids:
+        with Session(engine) as session:
+            statement = select(TagUploadLinks).where(TagUploadLinks.tag_id == tag_id, TagUploadLinks.upload_id == current_upload.id)
+            results = session.exec(statement)
+            tag_upload_link = results.first()
+
+            if tag_upload_link is not None:
+                session.delete(tag_upload_link)
+                session.commit()
+
+    return True
+
+@uploads_router.get("/uploads/{upload_id}/tags", tags=["uploads"], response_model=list[TagUploadLinks])
+async def get_all_tags_of_upload(upload_id: int):
+    with Session(engine) as session:
+        statement = select(TagUploadLinks).where(TagUploadLinks.upload_id == upload_id)
+        results = session.exec(statement)
+        return results.all()
