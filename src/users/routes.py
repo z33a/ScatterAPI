@@ -1,6 +1,6 @@
 # External imports
-from fastapi import APIRouter, HTTPException, Depends, status, Form, UploadFile, Body
-from sqlmodel import Session, select, or_
+from fastapi import APIRouter, HTTPException, Depends, status, UploadFile, Body
+from sqlmodel import Session, select
 from fastapi.responses import FileResponse
 import os
 from email_validator import validate_email, EmailNotValidError
@@ -12,7 +12,6 @@ from auth.utils import hash_password
 from users.utils import check_password_structure, verify_authenticated_user
 from config import ANONYMOUS_USER, SAVE_DIR
 from users.types import UserStatuses
-from files.utils import stream_save_file
 from utils import current_timestamp
 from uploads.utils import create_profile_picture
 

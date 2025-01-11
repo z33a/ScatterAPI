@@ -59,8 +59,12 @@ async def stream_save_file(file: UploadFile, target: str, max_file_size: int | N
 
 def save_file(file_path: str, data: bytes):
     try:
+        # Ensure the folder exists
+        folder = os.path.dirname(file_path)
+        if folder:  # Only create if there's a folder path in file_path
+            os.makedirs(folder, exist_ok=True)
+
         with open(file_path, "wb") as file:
             file.write(data)
-        print(f"Data successfully written to {file_path}")
     except Exception as e:
         print(f"An error occurred: {e}")

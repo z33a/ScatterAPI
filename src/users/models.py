@@ -1,6 +1,5 @@
 # External imports
 from sqlmodel import Field, SQLModel
-import datetime
 from decimal import Decimal
 
 # Internal imports

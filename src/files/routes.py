@@ -1,6 +1,5 @@
 # External imports
-from fastapi import APIRouter, HTTPException, Depends, status
-from typing import List
+from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse as FileResponseFastAPI
 from sqlmodel import Session, select
 import os

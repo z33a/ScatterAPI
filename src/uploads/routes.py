@@ -1,5 +1,5 @@
 # External imports
-from fastapi import APIRouter, HTTPException, Depends, File, UploadFile, Form, status, Body
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, Form, status, Body
 import os
 from collections import Counter
 from sqlmodel import Session, select, desc, asc, text
@@ -9,13 +9,13 @@ from jsonschema import validate, ValidationError
 from io import BytesIO
 
 # Internal imports
-from uploads.models import Uploads, UploadResponse, UploadCreate
+from uploads.models import Uploads, UploadResponse
 from users.models import UserResponse
 from users.utils import verify_authenticated_user
-from files.utils import create_file
-from uploads.types import UploadTypes, OrderByTypes, OrderByDirectionTypes
+from files.utils import create_file, save_file
+from uploads.types import OrderByTypes, OrderByDirectionTypes, order_by_metadata
 from database import engine
-from uploads.metadata_models import MetadataType, metadata_schemas, order_by_metadata
+from uploads.metadata_schemas import MetadataTypes, metadata_schemas
 from uploads.utils import create_upload_thumbnail
 from config import SAVE_DIR
 from tags.models import Tags, TagUploadLinks
@@ -26,7 +26,7 @@ uploads_router = APIRouter()
 async def new_upload(
     files: list[UploadFile],
     thumbnail: UploadFile | None = None,
-    metadata_type: MetadataType | None = Form(default=None),
+    metadata_type: MetadataTypes | None = Form(default=None),
     metadata_json: str | None = Form(default=None),
     title: str = Form(),
     description: str | None = Form(default=None),
@@ -46,25 +46,26 @@ async def new_upload(
     # Process metadata
     if metadata_type is not None:
         try:
-            metadata = json.loads(metadata_json)
+            metadata_json_parsed = json.loads(metadata_json)
 
-            if metadata_type != MetadataType.OTHER.value: # If "other", skip validation and accept any JSON structure
+            if metadata_type != MetadataTypes.OTHER: # If "other", skip validation and accept any JSON structure
                 metadata_schema = metadata_schemas.get(metadata_type)
 
                 if not metadata_schema:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid metadata type!")
 
-                metadata_schema.parse_obj(metadata)  # If validation fails, a ValidationError will be raised
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
+                validate(instance=metadata_json_parsed, schema=metadata_schema) # If validation fails, a ValidationError will be raised
+                metadata_json_validated = metadata_json_parsed
+            else:
+                metadata_json_validated = metadata_json_parsed
         except ValidationError as e:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Validation error: {e.errors()}")
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Validation error: {e}")
         except HTTPException as e:
             raise e
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal server error: {str(e)}")
     else:
-        metadata = None
+        metadata_json_validated = None
 
     # Get the most common primary mime type
     primary_mimes = [file.content_type.split('/')[0] for file in files]
@@ -72,7 +73,7 @@ async def new_upload(
     most_common_mime = primary_mime_counts.most_common(1)[0][0]
 
     # Create upload database entry
-    new_upload = Uploads(title=title, description=description, type=most_common_mime, metadata_type=metadata_type, metadata_json=metadata, created_by=current_user.id)
+    new_upload = Uploads(title=title, description=description, type=most_common_mime, metadata_type=metadata_type, metadata_json=metadata_json_validated, created_by=current_user.id)
     
     with Session(engine) as session:
         db_upload = Uploads.model_validate(new_upload)
@@ -96,12 +97,18 @@ async def new_upload(
             if generation_success:
                 break
 
+    # Save backup metadata
+    if metadata_json_validated is not None:
+        json_data = json.dumps(metadata_json_validated, indent=4).encode('utf-8') # Convert the dictionary to a JSON string and then to bytes
+
+        save_file(file_path=os.path.join(SAVE_DIR, "uploads", str(new_upload.id), "metadata.json"), data=json_data)
+
     return new_upload
 
 @uploads_router.get("/uploads", tags=["uploads"], response_model=list[UploadResponse])
-async def get_all_uploads(offset: int = 0, limit: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None, filter_by_metadata_type: MetadataType | None = None, order_by: str | None = None, order_by_direction: OrderByDirectionTypes = OrderByDirectionTypes.DESC):
+async def get_all_uploads(offset: int = 0, limit: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None, filter_by_metadata_type: MetadataTypes | None = None, order_by: str | None = None, order_by_direction: OrderByDirectionTypes = OrderByDirectionTypes.DESC):
     with Session(engine) as session:
-        statement = select(Uploads).where(Uploads.deleted_at == None)#.order_by(text("metadata_json->>'created_utc'")) # Order by just a test
+        statement = select(Uploads).where(Uploads.deleted_at == None)
 
         # All optional query params - will combine using AND into one statement        
         if created_after is not None and created_before is not None:

@@ -9,11 +9,14 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [ ] Make all requests respect 'deleted_at' and not show the item
 - [x] Create better way to inject current UNIX time into SQL querries that use PyDantic models
 - [ ] Use relationships when returning models like upload (will also include all files) Example: https://sqlmodel.tiangolo.com/tutorial/fastapi/relationships (For now do not do, the API design may not be aligned with it) 
-- [ ] Remove all unneeded imports
+- [x] Remove all unneeded imports
 - [x] Change filesystem structure from "/{user_id}/{upload_id}/{files | thumbnail.ext}/image.ext" to "/uploads/{upload_id}/{files | thubmnail.ext | info.json}/image.ext" and "/collections/{collection_id}/thubmnail.ext" and "/users/{user_id}/profile_picture.ext"
 - [ ] Add basic 'offset, limit and other filtering' to all 'get all ...' endpoints
 - [x] Rewrite all endpoints to use Body (JSON) for requests instead of Form()
 - [ ] Simlify endpoints by moving the base path to APIRouter: https://fastapi.tiangolo.com/tutorial/bigger-applications/#another-module-with-apirouter
+- [ ] Implement simple logging of events and errors (like failed file save) using python's built-in logging module
+- [ ] Ensure that only files up to specific size (like 20 MiB) can be uploaded by users as thumbnails/profile_pictures
+- [x] Better organize classes and enums into correct files
 
 ## Database
 - [x] Port database logic to SQLModel for simplicity and security
@@ -28,13 +31,14 @@ This is a todo list of things that should be implemented or changed (it is in no
 - [x] Delete a file if the upload was incomplete (for example when the file was too big)
 - [x] Cleanup 'new_upload' endpoint
 - [x] Allow users to upload json object as a metadata to an archive upload (like scraped from Reddit) and save it in postgres using JSONB (more efficient than JSON)
-- [ ] Validate json metadata using 'jsonschema'
-- [ ] Save backup json metadata alongside the files in a upload's directory
+- [x] Validate json metadata using 'jsonschema'
+- [x] Save backup json metadata alongside the files in a upload's directory
 - [x] Remove duplicate utils function for generating filename (first check if it is not used, if yes replace with one from files.utils)
 - [x] Implement creating thumbnail for gif, video etc.
 - [ ] Check all mime types against file extensions before working with them
 - [ ] Delete database entry if file upload failed (also applies to users, files etc.)
 - [ ] Create background job that would run once a day and downscale all uploaded files and save them alongside original ones (have option in endpoint to choose which version)
+- [ ] Rewrite, cleanup and complete order by metadata
 
 ## Users
 - [ ] Ensure that users can do only what they are authorized to do

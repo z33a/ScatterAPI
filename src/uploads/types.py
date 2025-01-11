@@ -1,10 +1,8 @@
 # External imports
 from enum import Enum
 
-class UploadTypes(Enum):
-    IMAGE = "image"
-    DOCUMENT = "document"
-    VIDEO = "video"
+# Internal imports
+from uploads.metadata_models import MetadataTypes
 
 class OrderByTypes(Enum):
     TITLE = "title"
@@ -15,3 +13,11 @@ class OrderByTypes(Enum):
 class OrderByDirectionTypes(Enum):
     ASC = "asc"
     DESC = "desc"
+
+class OrderByReddit(Enum):
+    CREATED_UTC = "created_utc"
+    TITLE_METADATA = "title_metadata"
+
+order_by_metadata = {
+    MetadataTypes.REDDIT: OrderByReddit
+}

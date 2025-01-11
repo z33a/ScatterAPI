@@ -1,6 +1,5 @@
 # External imports
-from sqlmodel import Field, Session, SQLModel, create_engine, select, Column
-import datetime
+from sqlmodel import Field, SQLModel, Column
 from decimal import Decimal
 from sqlalchemy.dialects.postgresql import JSONB
 

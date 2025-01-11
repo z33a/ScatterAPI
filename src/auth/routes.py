@@ -6,7 +6,8 @@ from sqlmodel import Session, select
 # Internal imports
 from users.models import Users
 from database import engine
-from auth.utils import verify_password, create_token, TokenType
+from auth.utils import verify_password, create_token
+from auth.types import TokenTypes
 from auth.models import Token
 
 auth_router = APIRouter()
@@ -25,8 +26,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         correct_password = verify_password(form_data.password, user.password)
 
         if correct_password:
-            access_token = create_token({"sub": form_data.username}, TokenType.ACCESS)
-            refresh_token = create_token({"sub": form_data.username}, TokenType.REFRESH)
+            access_token = create_token({"sub": form_data.username}, TokenTypes.ACCESS)
+            refresh_token = create_token({"sub": form_data.username}, TokenTypes.REFRESH)
 
             return {"access_token": access_token, "token_type": "bearer"}
         else:

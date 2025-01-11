@@ -1,5 +1,5 @@
 # External imports
-from fastapi import APIRouter, HTTPException, Depends, Form, status
+from fastapi import APIRouter, HTTPException, Depends, status
 from sqlmodel import Session, select
 
 # Internal imports

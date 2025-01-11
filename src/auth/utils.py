@@ -2,12 +2,12 @@
 from datetime import datetime, timedelta
 import jwt
 from passlib.context import CryptContext
-from enum import Enum
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 # Internal imports
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES
+from auth.types import TokenTypes
 
 # OAuth2PasswordBearer provides the token from the Authorization header
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
@@ -27,14 +27,9 @@ def hash_password(plain_password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-# Enum for token types
-class TokenType(Enum):
-    ACCESS = "access"
-    REFRESH = "refresh"
-
 # Function to create tokens
-def create_token(data: dict, token_type: TokenType) -> str:
-    if token_type == TokenType.ACCESS:
+def create_token(data: dict, token_type: TokenTypes) -> str:
+    if token_type == TokenTypes.ACCESS:
         expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     elif token_type == token_type.REFRESH:
         expires_delta = timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
@@ -52,6 +47,6 @@ def verify_token(token: str | None = Depends(oauth2_scheme)) -> dict | None:
         except jwt.ExpiredSignatureError as e:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired!")
         except jwt.PyJWTError as e:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token!")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token! Exception: {e}")
     else:
         return None
