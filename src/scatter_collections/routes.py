@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from database import engine
 from scatter_collections.models import Collections, CollectionCreate, CollectionResponse, UploadCollectionLinks
 from tags.models import TagCollectionLinks, Tags
-from uploads.models import Uploads
+from uploads.models import Uploads, UploadResponse
 from users.utils import verify_authenticated_user
 from users.models import UserResponse
 from config import ANONYMOUS_USER
@@ -137,12 +137,20 @@ async def remove_uploads_from_collection(collection_id: int, upload_ids: list[in
 
     return True
 
-@collections_router.get("/collections/{collection_id}/uploads", tags=["collections"], response_model=list[UploadCollectionLinks])
+@collections_router.get("/collections/{collection_id}/uploads", tags=["collections"], response_model=list[UploadResponse])
 async def get_all_uploads_in_collection(collection_id: int):
+    uploads = []
+
     with Session(engine) as session:
         statement = select(UploadCollectionLinks).where(UploadCollectionLinks.collection_id == collection_id)
         results = session.exec(statement)
-        return results.all()
+
+        for upload_collection_link in results.all():
+            statement = select(Uploads).where(Uploads.id == upload_collection_link.upload_id)
+            results1 = session.exec(statement)
+            uploads.append(results1.first())
+
+    return uploads
 
 @collections_router.post("/collections/{collection_id}/tags", tags=["collections"], response_model=list[TagCollectionLinks])
 async def add_tags_to_collection(collection_id: int, tag_ids: list[int] = Body(embed=True), current_user: UserResponse = Depends(verify_authenticated_user)):

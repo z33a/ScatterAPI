@@ -45,7 +45,7 @@ def verify_token(token: str | None = Depends(oauth2_scheme)) -> dict | None:
         try:
             return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         except jwt.ExpiredSignatureError as e:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired!")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired!")
         except jwt.PyJWTError as e:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token! Exception: {e}")
     else:

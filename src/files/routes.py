@@ -8,35 +8,18 @@ import os
 from files.models import Files, FileResponse
 from database import engine
 from config import SAVE_DIR
+from utils import build_sqlmodel_get_all_query
 
-# Main code
 files_router = APIRouter()
 
 @files_router.get("/files", tags=["files"], response_model=list[FileResponse])
-async def get_all_files(offset: int = 0, limit: int | None = 100, upload_id: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None):
+async def get_all_files(offset: int = 0, limit: int | None = 100, upload_id: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None, order_by: str | None = None, order_by_direction: str | None =  None):
     with Session(engine) as session:
-        statement = select(Files).where(Files.deleted_at == None)
-
-        # All optional query params - will combine using AND into one statement
+        additional_filters = []
         if upload_id is not None:
-            statement = statement.where(Files.upload_id == upload_id)
-        
-        if created_after is not None and created_before is not None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Query 'created_before' and 'created_after' cannot be declared together!")
+            additional_filters.append(Files.upload_id == upload_id)
 
-        if created_before is not None and created_after is None:
-            statement = statement.where(Files.created_at < created_before)
-
-        if created_after is not None and created_before is None:
-            statement = statement.where(Files.created_at > created_after)
-
-        if created_by is not None:
-            statement = statement.where(Files.created_by == created_by)
-
-        if limit is not None:
-            statement = statement.limit(limit)
-            
-        statement = statement.offset(offset)
+        statement = build_sqlmodel_get_all_query(model=Files, offset=offset, limit=limit, created_before=created_before, created_after=created_after, created_by=created_by, additional_filters=additional_filters)
         
         results = session.exec(statement)
 

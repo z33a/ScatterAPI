@@ -13,12 +13,12 @@ from uploads.models import Uploads, UploadResponse
 from users.models import UserResponse
 from users.utils import verify_authenticated_user
 from files.utils import create_file, save_file
-from uploads.types import OrderByTypes, OrderByDirectionTypes, order_by_metadata
 from database import engine
 from uploads.metadata_schemas import MetadataTypes, metadata_schemas
 from uploads.utils import create_upload_thumbnail
 from config import SAVE_DIR
 from tags.models import Tags, TagUploadLinks
+from utils import build_sqlmodel_get_all_query
 
 uploads_router = APIRouter()
 
@@ -106,50 +106,48 @@ async def new_upload(
     return new_upload
 
 @uploads_router.get("/uploads", tags=["uploads"], response_model=list[UploadResponse])
-async def get_all_uploads(offset: int = 0, limit: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None, filter_by_metadata_type: MetadataTypes | None = None, order_by: str | None = None, order_by_direction: OrderByDirectionTypes = OrderByDirectionTypes.DESC):
+async def get_all_uploads(offset: int = 0, limit: int | None = None, created_before: int | None = None, created_after: int | None = None, created_by: int | None = None, filter_by_metadata: str | None = None, order_by: str | None = None, order_by_direction: str | None = "asc"):
+    forbidden_order_by = ["metadata_json", "metadata_type"]
+
     with Session(engine) as session:
-        statement = select(Uploads).where(Uploads.deleted_at == None)
-
-        # All optional query params - will combine using AND into one statement        
-        if created_after is not None and created_before is not None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Query 'created_before' and 'created_after' cannot be declared together!")
-
-        if created_before is not None and created_after is None:
-            statement = statement.where(Uploads.created_at < created_before)
-
-        if created_after is not None and created_before is None:
-            statement = statement.where(Uploads.created_at > created_after)
-
-        if created_by is not None:
-            statement = statement.where(Uploads.created_by == created_by)
-
-        if filter_by_metadata_type is not None:
-            statement = statement.where(Uploads.metadata_type == filter_by_metadata_type)
-
-        if order_by is not None:
-            if order_by in OrderByTypes:
-                if order_by_direction == OrderByDirectionTypes.ASC:
-                    statement = statement.order_by(asc(getattr(Uploads, order_by)))
-                elif order_by_direction == OrderByDirectionTypes.DESC:
-                    statement = statement.order_by(desc(getattr(Uploads, order_by)))
-            else:
-                if filter_by_metadata_type is not None: # Cannot sort by metadata while other metadata types are present
-                    order_by_options = order_by_metadata.get(filter_by_metadata_type)
-
-                    if order_by in order_by_options:
-                        if order_by_direction == OrderByDirectionTypes.ASC:
-                            statement = statement.order_by(asc(text(f"metadata_json->>'{order_by}'")))
-                        elif order_by_direction == OrderByDirectionTypes.DESC:
-                            statement = statement.order_by(desc(text(f"metadata_json->>'{order_by}'")))
-                    else:
-                        raise HTTPException()
-                else:
-                    raise HTTPException()
-
-        if limit is not None:
-            statement = statement.limit(limit)
+        if order_by and order_by.startswith("metadata"): # Example: metadata/title1/pretty - from nhentai schema
+            if not filter_by_metadata:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot order by metadata while different kinds are present! Please use filter_by_metadata.")
             
-        statement = statement.offset(offset)
+            keys = order_by.split("/")  # Split the field path into components
+            schema = metadata_schemas[MetadataTypes(filter_by_metadata.upper())]
+
+            if schema is None:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filter_by_metadata!")
+
+            current_schema = schema.get("properties", {})  # Start with the top-level properties
+            
+            # Just check for key existence does not extract data!
+            for key in keys:
+                if key not in current_schema:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid key in order_by! Key: {key}") # Key not found in the current schema
+                # Move to the next level of the schema if possible
+                current_schema = current_schema[key].get("properties", {})
+            
+            expression = "metadata_json"
+            for i, key in enumerate(keys):
+                if i < len(keys) - 1:
+                    # Use -> for intermediate keys
+                    expression += f"->'{key}'"
+                else:
+                    # Use ->> for the final key to extract it as text
+                    expression += f"->>'{key}'"
+
+            statement = build_sqlmodel_get_all_query(model=Uploads, offset=offset, limit=limit, created_before=created_before, created_after=created_after, created_by=created_by, order_by=None)
+
+            if order_by_direction.lower() == "asc":
+                statement = statement.order_by(asc(text(expression)))
+            elif order_by_direction.lower() == "desc":
+                statement = statement.order_by(desc(text(expression)))
+            else:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid order_by_direction field! Valid options: asc, desc")
+        else:
+            statement = build_sqlmodel_get_all_query(model=Uploads, offset=offset, limit=limit, created_before=created_before, created_after=created_after, created_by=created_by, order_by=order_by, forbidden_order_by=forbidden_order_by, order_by_direction=order_by_direction)
 
         results = session.exec(statement)
 
